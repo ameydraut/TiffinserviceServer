@@ -32,7 +32,7 @@ public class UserTable {
     }
 
     public void setKey(String key) {
-        this.key = key;
+        key = key;
     }
     @DynamoDBAttribute(attributeName = "name")
     public String getName() {
