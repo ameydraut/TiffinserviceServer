@@ -19,7 +19,7 @@ public class UserTable {
     }
 
     public UserTable(String key, String name, String id, String address, String phoneNum, String email) {
-        key = key;
+        this.key = key;
         this.name = name;
         this.id = id;
         this.address = address;
@@ -32,7 +32,7 @@ public class UserTable {
     }
 
     public void setKey(String key) {
-        key = key;
+        this.key = key;
     }
     @DynamoDBAttribute(attributeName = "name")
     public String getName() {

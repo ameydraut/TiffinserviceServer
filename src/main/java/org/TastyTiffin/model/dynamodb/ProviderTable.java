@@ -5,9 +5,12 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBHashKey;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBRangeKey;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
 
+import java.util.List;
+
 
 @DynamoDBTable(tableName = "ProviderTable")
 public class ProviderTable {
+    private List<FoodItem> itemList;
     private String key;
     private String provideId;
     private String providerName;
@@ -20,14 +23,16 @@ public class ProviderTable {
     public ProviderTable() {
     }
 
-    public ProviderTable(String key, String provideId, String providerName, String provideAddress, String geoCoordinates, String imageUrl, String isFavorite) {
-        key = key;
+    public ProviderTable( String key,String provideId, String providerName, String provideAddress, String geoCoordinates, String imageUrl, String isFavorite , List<FoodItem> itemList) {
+        this.key=key;
         this.provideId = provideId;
         this.providerName = providerName;
         this.provideAddress = provideAddress;
         this.geoCoordinates = geoCoordinates;
         this.imageUrl = imageUrl;
         this.isFavorite = isFavorite;
+        this.itemList=itemList;
+
     }
     @DynamoDBHashKey(attributeName = "key")
     public String getKey() {
@@ -84,5 +89,13 @@ public class ProviderTable {
 
     public void setFavorite(String favorite) {
         isFavorite = favorite;
+    }
+
+    public List<FoodItem> getItemList() {
+        return itemList;
+    }
+
+    public void setItemList(List<FoodItem> itemList) {
+        this.itemList = itemList;
     }
 }
