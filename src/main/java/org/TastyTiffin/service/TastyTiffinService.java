@@ -2,17 +2,16 @@ package org.TastyTiffin.service;
 
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapperConfig;
+import com.amazonaws.services.dynamodbv2.datamodeling.*;
 import org.TastyTiffin.model.dynamodb.FoodItem;
+import org.TastyTiffin.model.dynamodb.PlaceOrderTable;
 import org.TastyTiffin.model.dynamodb.ProviderTable;
 import org.TastyTiffin.model.dynamodb.UserTable;
 import org.TastyTiffin.model.request.AddFoodItemRequest;
 import org.TastyTiffin.model.request.AddProviderRequest;
 import org.TastyTiffin.model.request.AddUserRequest;
-import org.TastyTiffin.model.response.GetFoodItemResponse;
-import org.TastyTiffin.model.response.GetProviderResponse;
-import org.TastyTiffin.model.response.GetUserResopnse;
+import org.TastyTiffin.model.request.PlaceOrderRequest;
+import org.TastyTiffin.model.response.*;
 import org.TastyTiffin.s3.S3Operations;
 
 import java.util.*;
@@ -51,10 +50,16 @@ public class TastyTiffinService {
         ProviderTable providerTable = new ProviderTable();
         providerTable.setKey(Character.toString(addProviderRequest.getProviderName().get().charAt(0)).toUpperCase());
         providerTable.setProvideId(addProviderRequest.getProvideId().get());
+        UUID uuid = UUID.randomUUID();
+        String bucketName = Character.toString(addProviderRequest.getProviderName().get().charAt(0)).toLowerCase();
+        bucketName = bucketName + bucketName + bucketName;
+        byte[] image = Base64.getDecoder().decode(addProviderRequest.getProviderImage().get());
+        s3Operations.UploadImage(uuid.toString() + "." + addProviderRequest.getProviderImageType().get(), image, bucketName, new HashMap<>());
+
         System.out.println(providerTable.getProvideId());
         System.out.println(providerTable.getKey());
         System.out.println(Character.toString(addProviderRequest.getProviderName().get().charAt(0)).toUpperCase());
-
+        providerTable.setProviderImageKey(uuid.toString() + "." + addProviderRequest.getProviderImageType().get());
         addProviderRequest.getProviderName().map(providerName -> {
             providerTable.setProviderName(providerName);
             return providerName;
@@ -67,10 +72,8 @@ public class TastyTiffinService {
             providerTable.setGeoCoordinates(geoCoordinates);
             return geoCoordinates;
         });
-        addProviderRequest.getImageUrl().map(imageUrl -> {
-            providerTable.setImageUrl(imageUrl);
-            return imageUrl;
-        });
+        providerTable.setProviderImageBucket(bucketName);
+
         addProviderRequest.getIsFavorite().map(isFavorite -> {
             providerTable.setFavorite(isFavorite);
             return isFavorite;
@@ -141,7 +144,7 @@ public class TastyTiffinService {
         getProviderResponse.setProvideAddress(Optional.of(providerTable.getProvideAddress()));
         getProviderResponse.setKey(Optional.of(providerTable.getKey()));
         getProviderResponse.setGeoCoordinates(Optional.of(providerTable.getGeoCoordinates()));
-        getProviderResponse.setImageUrl(Optional.of(providerTable.getImageUrl()));
+        getProviderResponse.setImageUrl(Optional.of(providerTable.getProviderImageBucket()));
         getProviderResponse.setIsFavorite(Optional.of(providerTable.getFavorite()));
         getProviderResponse.setItemList(Optional.of(getFoodItemResponses));
 
@@ -162,6 +165,56 @@ public class TastyTiffinService {
 
         return getUserResopnse;
     }
+
+    public GetAllProviderResponse getAllProviders(){
+
+       PaginatedScanList<ProviderTable> getProviderResponseList= mapper.scan(ProviderTable.class,new DynamoDBScanExpression());
+        List<ProviderResponse> providerResponseList= new ArrayList<>();
+        GetAllProviderResponse getAllProviderResponse= new GetAllProviderResponse();
+        getAllProviderResponse.setProviderResponseList(Optional.of(providerResponseList));
+       getProviderResponseList.forEach(providerTable -> {
+           ProviderResponse providerResponse= new ProviderResponse();
+           providerResponse.setProviderName(Optional.of(providerTable.getProviderName()));
+            providerResponse.setImageProviderBucket(Optional.of(providerTable.getProviderImageBucket()));
+            providerResponse.setImageProviderKey(Optional.of(providerTable.getProviderImageKey()));
+            providerResponse.setProviderId(Optional.of(providerTable.getProvideId()));
+            providerResponseList.add(providerResponse);
+
+       });
+       return getAllProviderResponse;
+    }
+
+    public String placeOrderRequest(PlaceOrderRequest placeOrderRequest){
+        PlaceOrderTable placeOrderTable = new PlaceOrderTable();
+        placeOrderTable.setKey("ORDERS");
+        UUID orderId=UUID.randomUUID();
+        placeOrderTable.setOrderStatus("PLACED");
+        placeOrderTable.setOrderId(orderId.toString());
+
+        placeOrderRequest.getItemIds().map(itemIds -> {
+            placeOrderTable.setItemIds(itemIds);
+            return placeOrderTable;
+        });
+        placeOrderRequest.getUserId().map(userId -> {
+            placeOrderTable.setUserId(userId);
+            return placeOrderTable;
+        });
+        placeOrderRequest.getProviderId().map(providerId -> {
+            placeOrderTable.setProviderId(providerId);
+            return placeOrderTable;
+        });
+        placeOrderRequest.getTotalPrice().map(totalPrice -> {
+            placeOrderTable.setTotalPrice(totalPrice);
+            return placeOrderTable;
+        });
+
+
+
+        mapper.save(placeOrderTable, DynamoDBMapperConfig.builder().withSaveBehavior(DynamoDBMapperConfig.SaveBehavior.UPDATE_SKIP_NULL_ATTRIBUTES).build());
+
+        return orderId.toString();
+    }
+
 }
 
 

@@ -1,6 +1,5 @@
 package org.TastyTiffin.model.request;
 
-import java.util.List;
 import java.util.Optional;
 
 public class AddProviderRequest {
@@ -8,7 +7,9 @@ public class AddProviderRequest {
     private Optional<String> providerName;
     private Optional<String> provideAddress;
     private Optional<String> geoCoordinates;
-    private Optional<String> imageUrl;
+    private Optional<String> providerImage;
+
+    private Optional<String> providerImageType;
     private Optional<String> isFavorite;
 
 
@@ -17,17 +18,27 @@ public class AddProviderRequest {
         providerName= Optional.empty();
         provideAddress= Optional.empty();
         geoCoordinates= Optional.empty();
-        imageUrl= Optional.empty();
+        providerImage = Optional.empty();
         isFavorite= Optional.empty();
+        providerImageType=Optional.empty();
+
     }
 
-    public AddProviderRequest(Optional<String> provideId, Optional<String> providerName, Optional<String> provideAddress, Optional<String> geoCoordinates, Optional<String> imageUrl, Optional<String> isFavorite) {
+    public AddProviderRequest(Optional<String> provideId,
+                              Optional<String> providerName,
+                              Optional<String> provideAddress,
+                              Optional<String> geoCoordinates,
+                              Optional<String> providerImage,
+                              Optional<String> providerImageType,
+                              Optional<String> isFavorite) {
         this.provideId = provideId;
         this.providerName = providerName;
         this.provideAddress = provideAddress;
         this.geoCoordinates = geoCoordinates;
-        this.imageUrl = imageUrl;
+        this.providerImage = providerImage;
         this.isFavorite = isFavorite;
+        this.providerImageType=providerImageType;
+
     }
 
     public Optional<String> getProvideId() {
@@ -62,12 +73,12 @@ public class AddProviderRequest {
         this.geoCoordinates = geoCoordinates;
     }
 
-    public Optional<String> getImageUrl() {
-        return imageUrl;
+    public Optional<String> getProviderImage() {
+        return providerImage;
     }
 
-    public void setImageUrl(Optional<String> imageUrl) {
-        this.imageUrl = imageUrl;
+    public void setProviderImage(Optional<String> providerImage) {
+        this.providerImage = providerImage;
     }
 
     public Optional<String> getIsFavorite() {
@@ -77,6 +88,13 @@ public class AddProviderRequest {
     public void setIsFavorite(Optional<String> isFavorite) {
         this.isFavorite = isFavorite;
     }
+    public Optional<String> getProviderImageType() {
+        return providerImageType;
+    }
+
+    public void setProviderImageType(Optional<String> providerImageType) {
+        this.providerImageType = providerImageType;
+    }
 
     @Override
     public String toString() {
@@ -85,8 +103,10 @@ public class AddProviderRequest {
                 ", providerName=" + providerName +
                 ", provideAddress=" + provideAddress +
                 ", geoCoordinates=" + geoCoordinates +
-                ", imageUrl=" + imageUrl +
+                ", providerImage=" + providerImage +
+                ", providerImageType=" + providerImageType +
                 ", isFavorite=" + isFavorite +
+
                 '}';
     }
 }

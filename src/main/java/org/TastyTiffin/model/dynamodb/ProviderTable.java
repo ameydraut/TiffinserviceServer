@@ -16,22 +16,25 @@ public class ProviderTable {
     private String providerName;
     private String provideAddress;
     private String geoCoordinates;
-    private String imageUrl;
+    private String providerImageBucket;
+    private String providerImageKey;
     private String isFavorite;
 
 
     public ProviderTable() {
     }
 
-    public ProviderTable( String key,String provideId, String providerName, String provideAddress, String geoCoordinates, String imageUrl, String isFavorite , List<FoodItem> itemList) {
+    public ProviderTable( String key,String provideId, String providerName, String provideAddress, String geoCoordinates, String imageUrl, String isFavorite , List<FoodItem> itemList,String providerImageKey) {
         this.key=key;
         this.provideId = provideId;
         this.providerName = providerName;
         this.provideAddress = provideAddress;
         this.geoCoordinates = geoCoordinates;
-        this.imageUrl = imageUrl;
+        this.providerImageBucket = imageUrl;
         this.isFavorite = isFavorite;
         this.itemList=itemList;
+        this.providerImageKey=providerImageKey;
+
 
     }
     @DynamoDBHashKey(attributeName = "key")
@@ -74,13 +77,13 @@ public class ProviderTable {
     public void setGeoCoordinates(String geoCoordinates) {
         this.geoCoordinates = geoCoordinates;
     }
-    @DynamoDBAttribute(attributeName = "imageUrl")
-    public String getImageUrl() {
-        return imageUrl;
+    @DynamoDBAttribute(attributeName = "providerImageBucket")
+    public String getProviderImageBucket() {
+        return providerImageBucket;
     }
 
-    public void setImageUrl(String imageUrl) {
-        this.imageUrl = imageUrl;
+    public void setProviderImageBucket(String providerImageBucket) {
+        this.providerImageBucket = providerImageBucket;
     }
     @DynamoDBAttribute(attributeName = "isFavorite")
     public String getFavorite() {
@@ -98,4 +101,15 @@ public class ProviderTable {
     public void setItemList(List<FoodItem> itemList) {
         this.itemList = itemList;
     }
+
+    @DynamoDBAttribute(attributeName = "providerImageKey")
+    public String getProviderImageKey() {
+        return providerImageKey;
+    }
+
+    public void setProviderImageKey(String providerImageKey) {
+        this.providerImageKey = providerImageKey;
+    }
+
+
 }
