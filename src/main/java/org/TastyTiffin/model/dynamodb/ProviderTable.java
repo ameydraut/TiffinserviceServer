@@ -19,12 +19,13 @@ public class ProviderTable {
     private String providerImageBucket;
     private String providerImageKey;
     private String isFavorite;
+    private List<String> orderHistory;
 
 
     public ProviderTable() {
     }
 
-    public ProviderTable( String key,String provideId, String providerName, String provideAddress, String geoCoordinates, String imageUrl, String isFavorite , List<FoodItem> itemList,String providerImageKey) {
+    public ProviderTable( String key,String provideId, String providerName, String provideAddress, String geoCoordinates, String imageUrl, String isFavorite , List<FoodItem> itemList,String providerImageKey, List<String> orderHistory) {
         this.key=key;
         this.provideId = provideId;
         this.providerName = providerName;
@@ -34,8 +35,7 @@ public class ProviderTable {
         this.isFavorite = isFavorite;
         this.itemList=itemList;
         this.providerImageKey=providerImageKey;
-
-
+        this.orderHistory=orderHistory;
     }
     @DynamoDBHashKey(attributeName = "key")
     public String getKey() {
@@ -111,5 +111,12 @@ public class ProviderTable {
         this.providerImageKey = providerImageKey;
     }
 
+    @DynamoDBAttribute(attributeName = "orderHistory")
+    public List<String> getOrderHistory() {
+        return orderHistory;
+    }
 
+    public void setOrderHistory(List<String> orderHistory) {
+        this.orderHistory = orderHistory;
+    }
 }

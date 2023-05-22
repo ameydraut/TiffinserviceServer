@@ -3,14 +3,12 @@ package org.TastyTiffin.service;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.datamodeling.*;
+import org.TastyTiffin.lambda.OrderStatus;
 import org.TastyTiffin.model.dynamodb.FoodItem;
 import org.TastyTiffin.model.dynamodb.PlaceOrderTable;
 import org.TastyTiffin.model.dynamodb.ProviderTable;
 import org.TastyTiffin.model.dynamodb.UserTable;
-import org.TastyTiffin.model.request.AddFoodItemRequest;
-import org.TastyTiffin.model.request.AddProviderRequest;
-import org.TastyTiffin.model.request.AddUserRequest;
-import org.TastyTiffin.model.request.PlaceOrderRequest;
+import org.TastyTiffin.model.request.*;
 import org.TastyTiffin.model.response.*;
 import org.TastyTiffin.s3.S3Operations;
 
@@ -23,7 +21,7 @@ public class TastyTiffinService {
 
     public String addUser(AddUserRequest addUserRequest) {
         UserTable userTable = new UserTable();
-        userTable.setKey(Character.toString(addUserRequest.getName().get().charAt(0)).toUpperCase());
+        userTable.setKey("USER");
         userTable.setId(addUserRequest.getId().get());
         addUserRequest.getName().map(name -> {
             userTable.setName(name);
@@ -41,6 +39,8 @@ public class TastyTiffinService {
             userTable.setEmail(email);
             return email;
         });
+
+        userTable.setOrderHistory(new ArrayList<>());
         mapper.save(userTable, DynamoDBMapperConfig.builder().withSaveBehavior(DynamoDBMapperConfig.SaveBehavior.UPDATE_SKIP_NULL_ATTRIBUTES).build());
 
         return addUserRequest.getId().get();
@@ -48,7 +48,7 @@ public class TastyTiffinService {
 
     public String addProvider(AddProviderRequest addProviderRequest) {
         ProviderTable providerTable = new ProviderTable();
-        providerTable.setKey(Character.toString(addProviderRequest.getProviderName().get().charAt(0)).toUpperCase());
+        providerTable.setKey("PROVIDER");
         providerTable.setProvideId(addProviderRequest.getProvideId().get());
         UUID uuid = UUID.randomUUID();
         String bucketName = Character.toString(addProviderRequest.getProviderName().get().charAt(0)).toLowerCase();
@@ -78,7 +78,7 @@ public class TastyTiffinService {
             providerTable.setFavorite(isFavorite);
             return isFavorite;
         });
-
+        providerTable.setOrderHistory(new ArrayList<>());
 
         mapper.save(providerTable, DynamoDBMapperConfig.builder().withSaveBehavior(DynamoDBMapperConfig.SaveBehavior.UPDATE_SKIP_NULL_ATTRIBUTES).build());
 
@@ -94,7 +94,7 @@ public class TastyTiffinService {
 
         String providerName = providerTable.getProviderName();
         UUID uuid = UUID.randomUUID();
-        UUID fooditemId=UUID.randomUUID();
+        UUID fooditemId = UUID.randomUUID();
         String bucketName = Character.toString(providerName.charAt(0)).toLowerCase();
         bucketName = bucketName + bucketName + bucketName;
         byte[] image = Base64.getDecoder().decode(addFoodItemRequest.getItemImage().get());
@@ -123,7 +123,7 @@ public class TastyTiffinService {
     public GetProviderResponse getProvider(String providerId, String providerHashkey) {
         ProviderTable providerTable = mapper.load(ProviderTable.class, providerHashkey, providerId);
         List<GetFoodItemResponse> getFoodItemResponses = new ArrayList<>();
-        if (providerTable.getItemList()!= null){
+        if (providerTable.getItemList() != null) {
             for (int i = 0; i < providerTable.getItemList().size(); i++) {
                 FoodItem foodItem = providerTable.getItemList().get(i);
                 GetFoodItemResponse getFoodItemResponse = new GetFoodItemResponse();
@@ -150,12 +150,13 @@ public class TastyTiffinService {
 
         return getProviderResponse;
     }
-    public GetUserResopnse getUser(String userId , String userHashkey){
+
+    public GetUserResopnse getUser(String userId, String userHashkey) {
         System.out.println(userId);
         System.out.println(userHashkey);
 
-        UserTable userTable=mapper.load(UserTable.class, userHashkey , userId);
-        GetUserResopnse getUserResopnse=new GetUserResopnse();
+        UserTable userTable = mapper.load(UserTable.class, userHashkey, userId);
+        GetUserResopnse getUserResopnse = new GetUserResopnse();
         getUserResopnse.setName(Optional.of(userTable.getName()));
         getUserResopnse.setAddress(Optional.of(userTable.getAddress()));
         getUserResopnse.setId(Optional.of(userTable.getId()));
@@ -166,28 +167,34 @@ public class TastyTiffinService {
         return getUserResopnse;
     }
 
-    public GetAllProviderResponse getAllProviders(){
+    public GetAllProviderResponse getAllProviders() {
 
-       PaginatedScanList<ProviderTable> getProviderResponseList= mapper.scan(ProviderTable.class,new DynamoDBScanExpression());
-        List<ProviderResponse> providerResponseList= new ArrayList<>();
-        GetAllProviderResponse getAllProviderResponse= new GetAllProviderResponse();
+        PaginatedScanList<ProviderTable> getProviderResponseList = mapper.scan(ProviderTable.class, new DynamoDBScanExpression());
+        List<ProviderResponse> providerResponseList = new ArrayList<>();
+        GetAllProviderResponse getAllProviderResponse = new GetAllProviderResponse();
         getAllProviderResponse.setProviderResponseList(Optional.of(providerResponseList));
-       getProviderResponseList.forEach(providerTable -> {
-           ProviderResponse providerResponse= new ProviderResponse();
-           providerResponse.setProviderName(Optional.of(providerTable.getProviderName()));
+        getProviderResponseList.forEach(providerTable -> {
+            ProviderResponse providerResponse = new ProviderResponse();
+            providerResponse.setProviderName(Optional.of(providerTable.getProviderName()));
             providerResponse.setImageProviderBucket(Optional.of(providerTable.getProviderImageBucket()));
             providerResponse.setImageProviderKey(Optional.of(providerTable.getProviderImageKey()));
             providerResponse.setProviderId(Optional.of(providerTable.getProvideId()));
             providerResponseList.add(providerResponse);
 
-       });
-       return getAllProviderResponse;
+        });
+        return getAllProviderResponse;
     }
 
-    public String placeOrderRequest(PlaceOrderRequest placeOrderRequest){
+    public String placeOrderRequest(PlaceOrderRequest placeOrderRequest) {
+        String providerId = placeOrderRequest.getProviderId().get();
+        ProviderTable providerTable = mapper.load(ProviderTable.class, "PROVIDER", providerId);
+
+        String userId = placeOrderRequest.getUserId().get();
+        UserTable userTable = mapper.load(UserTable.class, "USER", userId);
+
         PlaceOrderTable placeOrderTable = new PlaceOrderTable();
         placeOrderTable.setKey("ORDERS");
-        UUID orderId=UUID.randomUUID();
+        UUID orderId = UUID.randomUUID();
         placeOrderTable.setOrderStatus("PLACED");
         placeOrderTable.setOrderId(orderId.toString());
 
@@ -195,12 +202,12 @@ public class TastyTiffinService {
             placeOrderTable.setItemIds(itemIds);
             return placeOrderTable;
         });
-        placeOrderRequest.getUserId().map(userId -> {
-            placeOrderTable.setUserId(userId);
+        placeOrderRequest.getUserId().map(uId -> {
+            placeOrderTable.setUserId(uId);
             return placeOrderTable;
         });
-        placeOrderRequest.getProviderId().map(providerId -> {
-            placeOrderTable.setProviderId(providerId);
+        placeOrderRequest.getProviderId().map(pId -> {
+            placeOrderTable.setProviderId(pId);
             return placeOrderTable;
         });
         placeOrderRequest.getTotalPrice().map(totalPrice -> {
@@ -208,13 +215,56 @@ public class TastyTiffinService {
             return placeOrderTable;
         });
 
+        providerTable.getOrderHistory().add(orderId.toString());
+        userTable.getOrderHistory().add(orderId.toString());
 
 
         mapper.save(placeOrderTable, DynamoDBMapperConfig.builder().withSaveBehavior(DynamoDBMapperConfig.SaveBehavior.UPDATE_SKIP_NULL_ATTRIBUTES).build());
+        mapper.save(providerTable, DynamoDBMapperConfig.builder().withSaveBehavior(DynamoDBMapperConfig.SaveBehavior.UPDATE_SKIP_NULL_ATTRIBUTES).build());
+        mapper.save(userTable, DynamoDBMapperConfig.builder().withSaveBehavior(DynamoDBMapperConfig.SaveBehavior.UPDATE_SKIP_NULL_ATTRIBUTES).build());
 
         return orderId.toString();
     }
 
+    public String orderStatus(OrderStatusRequest orderStatusRequest) {
+        String orderId = orderStatusRequest.getOrderId().get();
+        String orderHashkey = orderStatusRequest.getPartitionKey().get();
+        PlaceOrderTable placeOrderTable = mapper.load(PlaceOrderTable.class, orderHashkey, orderId);
+        placeOrderTable.setOrderStatus(orderStatusRequest.getOrderStatus().get());
+        mapper.save(placeOrderTable, DynamoDBMapperConfig.builder().withSaveBehavior(DynamoDBMapperConfig.SaveBehavior.UPDATE_SKIP_NULL_ATTRIBUTES).build());
+        return orderId;
+    }
+
+    public GetOrderHistoryResponse getUserOrderHistory(String id) {
+
+        UserTable userTable = mapper.load(UserTable.class, "USER", id);
+        GetOrderHistoryResponse getOrderHistoryResponse = new GetOrderHistoryResponse();
+        getOrderHistoryResponse.setOrderIds(Optional.of(userTable.getOrderHistory()));
+        return getOrderHistoryResponse;
+
+    }
+
+    public GetOrderHistoryResponse getProviderOrderHistory(String id) {
+
+        ProviderTable providerTable = mapper.load(ProviderTable.class, "PROVIDER", id);
+        GetOrderHistoryResponse getOrderHistoryResponse = new GetOrderHistoryResponse();
+        getOrderHistoryResponse.setOrderIds(Optional.of(providerTable.getOrderHistory()));
+        return getOrderHistoryResponse;
+
+    }
+
+    public GetOrderResponse getOrderDetails(String orderId){
+        PlaceOrderTable placeOrderTable=mapper.load(PlaceOrderTable.class,"ORDERS",orderId);
+        GetOrderResponse getOrderResponse=new GetOrderResponse();
+        getOrderResponse.setOrderId(Optional.of(placeOrderTable.getOrderId()));
+        getOrderResponse.setOrderStatus(Optional.of(placeOrderTable.getOrderStatus()));
+        getOrderResponse.setItemIds(Optional.of(placeOrderTable.getItemIds()));
+        getOrderResponse.setProviderId(Optional.of(placeOrderTable.getProviderId()));
+        getOrderResponse.setTotalPrice(Optional.of(placeOrderTable.getTotalPrice()));
+        getOrderResponse.setUserId(Optional.of(placeOrderTable.getUserId()));
+
+        return getOrderResponse;
+
+    }
+
 }
-
-

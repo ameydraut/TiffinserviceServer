@@ -5,6 +5,8 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBHashKey;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBRangeKey;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
 
+import java.util.List;
+
 @DynamoDBTable(tableName = "UserTable")
 public class UserTable {
     private String key ;
@@ -14,17 +16,20 @@ public class UserTable {
     private String phoneNum;
     private String email;
 
+    private List<String> orderHistory;
+
     public UserTable() {
 
     }
 
-    public UserTable(String key, String name, String id, String address, String phoneNum, String email) {
+    public UserTable(String key, String name, String id, String address, String phoneNum, String email,List<String> orderHistory) {
         this.key = key;
         this.name = name;
         this.id = id;
         this.address = address;
         this.phoneNum = phoneNum;
         this.email = email;
+        this.orderHistory= orderHistory;
     }
     @DynamoDBHashKey(attributeName = "key")
     public String getKey() {
@@ -73,5 +78,14 @@ public class UserTable {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    @DynamoDBAttribute(attributeName = "orderHistory")
+    public List<String> getOrderHistory() {
+        return orderHistory;
+    }
+
+    public void setOrderHistory(List<String> orderHistory) {
+        this.orderHistory = orderHistory;
     }
 }
