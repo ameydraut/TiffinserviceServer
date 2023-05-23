@@ -1,8 +1,16 @@
 package org.TastyTiffin.service;
 
+import com.amazonaws.regions.Regions;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.datamodeling.*;
+import com.amazonaws.services.sns.AmazonSNS;
+import com.amazonaws.services.sns.AmazonSNSClientBuilder;
+import com.amazonaws.services.sns.model.CreatePlatformEndpointRequest;
+import com.amazonaws.services.sns.model.CreatePlatformEndpointResult;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import org.TastyTiffin.lambda.OrderStatus;
 import org.TastyTiffin.model.dynamodb.FoodItem;
 import org.TastyTiffin.model.dynamodb.PlaceOrderTable;
@@ -18,6 +26,10 @@ public class TastyTiffinService {
     S3Operations s3Operations = new S3Operations();
     final AmazonDynamoDB client = AmazonDynamoDBClientBuilder.defaultClient();
     final DynamoDBMapper mapper = new DynamoDBMapper(client);
+    AmazonSNS amazonSNSClient = AmazonSNSClientBuilder.standard().withRegion(Regions.AP_SOUTH_1)
+            .build();
+
+    String applicationArn="arn:aws:sns:ap-south-1:489821093454:app/GCM/TiffinService";
 
     public String addUser(AddUserRequest addUserRequest) {
         UserTable userTable = new UserTable();
@@ -41,6 +53,9 @@ public class TastyTiffinService {
         });
 
         userTable.setOrderHistory(new ArrayList<>());
+        String arn=createEndpoint(addUserRequest.getUserToken().get());
+
+        userTable.setUserToken(arn);
         mapper.save(userTable, DynamoDBMapperConfig.builder().withSaveBehavior(DynamoDBMapperConfig.SaveBehavior.UPDATE_SKIP_NULL_ATTRIBUTES).build());
 
         return addUserRequest.getId().get();
@@ -79,6 +94,8 @@ public class TastyTiffinService {
             return isFavorite;
         });
         providerTable.setOrderHistory(new ArrayList<>());
+        String arn=createEndpoint(addProviderRequest.getProviderToken().get());
+        providerTable.setProviderToken(arn);
 
         mapper.save(providerTable, DynamoDBMapperConfig.builder().withSaveBehavior(DynamoDBMapperConfig.SaveBehavior.UPDATE_SKIP_NULL_ATTRIBUTES).build());
 
@@ -185,12 +202,15 @@ public class TastyTiffinService {
         return getAllProviderResponse;
     }
 
-    public String placeOrderRequest(PlaceOrderRequest placeOrderRequest) {
+    public String placeOrderRequest(PlaceOrderRequest placeOrderRequest) throws JsonProcessingException {
         String providerId = placeOrderRequest.getProviderId().get();
         ProviderTable providerTable = mapper.load(ProviderTable.class, "PROVIDER", providerId);
 
         String userId = placeOrderRequest.getUserId().get();
         UserTable userTable = mapper.load(UserTable.class, "USER", userId);
+
+        String providerToken= providerTable.getProviderToken();
+        String userToken= userTable.getUserToken();
 
         PlaceOrderTable placeOrderTable = new PlaceOrderTable();
         placeOrderTable.setKey("ORDERS");
@@ -223,6 +243,17 @@ public class TastyTiffinService {
         mapper.save(providerTable, DynamoDBMapperConfig.builder().withSaveBehavior(DynamoDBMapperConfig.SaveBehavior.UPDATE_SKIP_NULL_ATTRIBUTES).build());
         mapper.save(userTable, DynamoDBMapperConfig.builder().withSaveBehavior(DynamoDBMapperConfig.SaveBehavior.UPDATE_SKIP_NULL_ATTRIBUTES).build());
 
+        PlaceOrderTable placeOrderTable1 = mapper.load(PlaceOrderTable.class, "ORDERS", orderId.toString());
+        GetOrderResponse getOrderResponse=new GetOrderResponse();
+        getOrderResponse.setOrderId(Optional.of(placeOrderTable1.getOrderId()));
+        getOrderResponse.setOrderStatus(Optional.of(placeOrderTable1.getOrderStatus()));
+        getOrderResponse.setItemIds(Optional.of(placeOrderTable1.getItemIds()));
+        getOrderResponse.setProviderId(Optional.of(placeOrderTable1.getProviderId()));
+        getOrderResponse.setTotalPrice(Optional.of(placeOrderTable1.getTotalPrice()));
+        getOrderResponse.setUserId(Optional.of(placeOrderTable1.getUserId()));
+        String eventBody = new ObjectMapper().registerModule(new Jdk8Module()).writeValueAsString(getOrderResponse);
+        amazonSNSClient.publish(providerToken,eventBody);
+        amazonSNSClient.publish(userToken,eventBody);
         return orderId.toString();
     }
 
@@ -265,6 +296,15 @@ public class TastyTiffinService {
 
         return getOrderResponse;
 
+    }
+    public String createEndpoint(String token){
+
+        CreatePlatformEndpointRequest createPlatformEndpointRequest = new CreatePlatformEndpointRequest();
+        createPlatformEndpointRequest.withPlatformApplicationArn(applicationArn);
+        createPlatformEndpointRequest.withToken(token);
+        CreatePlatformEndpointResult createPlatformEndpointResult= amazonSNSClient.createPlatformEndpoint(createPlatformEndpointRequest);
+
+        return createPlatformEndpointResult.getEndpointArn();
     }
 
 }

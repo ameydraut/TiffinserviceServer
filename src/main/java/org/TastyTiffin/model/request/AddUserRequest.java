@@ -8,6 +8,7 @@ public class AddUserRequest {
     private Optional<String> id;
     private Optional<String> phoneNum;
     private Optional<String> email;
+    private Optional<String> userToken;
 
     public AddUserRequest() {
         name = Optional.empty();
@@ -15,14 +16,16 @@ public class AddUserRequest {
         id = Optional.empty();
         phoneNum = Optional.empty();
         email = Optional.empty();
+        userToken=Optional.empty();
     }
 
-    public AddUserRequest(Optional<String> name, Optional<String> address, Optional<String> id, Optional<String> phoneNum, Optional<String> email) {
+    public AddUserRequest(Optional<String> name, Optional<String> address, Optional<String> id, Optional<String> phoneNum, Optional<String> email,Optional<String> userToken) {
         this.name = name;
         this.address = address;
         this.id = id;
         this.phoneNum = phoneNum;
         this.email = email;
+        this.userToken=userToken;
     }
 
     public Optional<String> getName() {
@@ -64,6 +67,13 @@ public class AddUserRequest {
     public void setEmail(Optional<String> email) {
         this.email = email;
     }
+    public Optional<String> getUserToken() {
+        return userToken;
+    }
+
+    public void setUserToken(Optional<String> userToken) {
+        this.userToken = userToken;
+    }
 
     @Override
     public String toString() {
@@ -73,6 +83,9 @@ public class AddUserRequest {
                 ", id=" + id +
                 ", phoneNum=" + phoneNum +
                 ", email=" + email +
+                ", userToken=" + userToken +
                 '}';
     }
+
+
 }

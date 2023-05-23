@@ -1,5 +1,7 @@
 package org.TastyTiffin.model.request;
 
+import com.amazonaws.services.dynamodbv2.xspec.S;
+
 import java.util.Optional;
 
 public class AddProviderRequest {
@@ -11,6 +13,7 @@ public class AddProviderRequest {
 
     private Optional<String> providerImageType;
     private Optional<String> isFavorite;
+    private Optional<String> providerToken;
 
 
     public AddProviderRequest() {
@@ -21,6 +24,7 @@ public class AddProviderRequest {
         providerImage = Optional.empty();
         isFavorite= Optional.empty();
         providerImageType=Optional.empty();
+        providerToken=Optional.empty();
 
     }
 
@@ -30,7 +34,9 @@ public class AddProviderRequest {
                               Optional<String> geoCoordinates,
                               Optional<String> providerImage,
                               Optional<String> providerImageType,
-                              Optional<String> isFavorite) {
+                              Optional<String> isFavorite,
+                              Optional<String> providerToken
+                              ) {
         this.provideId = provideId;
         this.providerName = providerName;
         this.provideAddress = provideAddress;
@@ -38,6 +44,7 @@ public class AddProviderRequest {
         this.providerImage = providerImage;
         this.isFavorite = isFavorite;
         this.providerImageType=providerImageType;
+        this.providerToken=providerToken;
 
     }
 
@@ -95,6 +102,13 @@ public class AddProviderRequest {
     public void setProviderImageType(Optional<String> providerImageType) {
         this.providerImageType = providerImageType;
     }
+    public Optional<String> getProviderToken() {
+        return providerToken;
+    }
+
+    public void setProviderToken(Optional<String> providerToken) {
+        this.providerToken = providerToken;
+    }
 
     @Override
     public String toString() {
@@ -106,7 +120,9 @@ public class AddProviderRequest {
                 ", providerImage=" + providerImage +
                 ", providerImageType=" + providerImageType +
                 ", isFavorite=" + isFavorite +
-
+                ", providerToken=" + providerToken +
                 '}';
     }
+
+
 }

@@ -17,12 +17,13 @@ public class UserTable {
     private String email;
 
     private List<String> orderHistory;
+    private String userToken;
 
     public UserTable() {
 
     }
 
-    public UserTable(String key, String name, String id, String address, String phoneNum, String email,List<String> orderHistory) {
+    public UserTable(String key, String name, String id, String address, String phoneNum, String email,List<String> orderHistory,String userToken) {
         this.key = key;
         this.name = name;
         this.id = id;
@@ -30,6 +31,7 @@ public class UserTable {
         this.phoneNum = phoneNum;
         this.email = email;
         this.orderHistory= orderHistory;
+        this.userToken=userToken;
     }
     @DynamoDBHashKey(attributeName = "key")
     public String getKey() {
@@ -87,5 +89,13 @@ public class UserTable {
 
     public void setOrderHistory(List<String> orderHistory) {
         this.orderHistory = orderHistory;
+    }
+    @DynamoDBAttribute(attributeName = "userToken")
+    public String getUserToken() {
+        return userToken;
+    }
+
+    public void setUserToken(String userToken) {
+        this.userToken = userToken;
     }
 }
