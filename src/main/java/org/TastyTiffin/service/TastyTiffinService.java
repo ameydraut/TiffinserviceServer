@@ -205,7 +205,6 @@ public class TastyTiffinService {
     public String placeOrderRequest(PlaceOrderRequest placeOrderRequest) throws JsonProcessingException {
         String providerId = placeOrderRequest.getProviderId().get();
         ProviderTable providerTable = mapper.load(ProviderTable.class, "PROVIDER", providerId);
-
         String userId = placeOrderRequest.getUserId().get();
         UserTable userTable = mapper.load(UserTable.class, "USER", userId);
 
@@ -217,7 +216,6 @@ public class TastyTiffinService {
         UUID orderId = UUID.randomUUID();
         placeOrderTable.setOrderStatus("PLACED");
         placeOrderTable.setOrderId(orderId.toString());
-
         placeOrderRequest.getItemIds().map(itemIds -> {
             placeOrderTable.setItemIds(itemIds);
             return placeOrderTable;
@@ -234,11 +232,8 @@ public class TastyTiffinService {
             placeOrderTable.setTotalPrice(totalPrice);
             return placeOrderTable;
         });
-
         providerTable.getOrderHistory().add(orderId.toString());
         userTable.getOrderHistory().add(orderId.toString());
-
-
         mapper.save(placeOrderTable, DynamoDBMapperConfig.builder().withSaveBehavior(DynamoDBMapperConfig.SaveBehavior.UPDATE_SKIP_NULL_ATTRIBUTES).build());
         mapper.save(providerTable, DynamoDBMapperConfig.builder().withSaveBehavior(DynamoDBMapperConfig.SaveBehavior.UPDATE_SKIP_NULL_ATTRIBUTES).build());
         mapper.save(userTable, DynamoDBMapperConfig.builder().withSaveBehavior(DynamoDBMapperConfig.SaveBehavior.UPDATE_SKIP_NULL_ATTRIBUTES).build());
@@ -254,6 +249,7 @@ public class TastyTiffinService {
         String eventBody = new ObjectMapper().registerModule(new Jdk8Module()).writeValueAsString(getOrderResponse);
         amazonSNSClient.publish(providerToken,eventBody);
         amazonSNSClient.publish(userToken,eventBody);
+
         return orderId.toString();
     }
 
@@ -269,18 +265,25 @@ public class TastyTiffinService {
     public GetOrderHistoryResponse getUserOrderHistory(String id) {
 
         UserTable userTable = mapper.load(UserTable.class, "USER", id);
-        GetOrderHistoryResponse getOrderHistoryResponse = new GetOrderHistoryResponse();
-        getOrderHistoryResponse.setOrderIds(Optional.of(userTable.getOrderHistory()));
-        return getOrderHistoryResponse;
+        List<String> orderIds = userTable.getOrderHistory();
+        List<GetOrderResponse> responseList = new ArrayList<>();
+        for(String orderId : orderIds) {
+            responseList.add(getOrderDetails(orderId));
+        }
+        return new GetOrderHistoryResponse(Optional.of(responseList));
+
 
     }
 
     public GetOrderHistoryResponse getProviderOrderHistory(String id) {
 
         ProviderTable providerTable = mapper.load(ProviderTable.class, "PROVIDER", id);
-        GetOrderHistoryResponse getOrderHistoryResponse = new GetOrderHistoryResponse();
-        getOrderHistoryResponse.setOrderIds(Optional.of(providerTable.getOrderHistory()));
-        return getOrderHistoryResponse;
+        List<String> orderIds = providerTable.getOrderHistory();
+        List<GetOrderResponse> responseList = new ArrayList<>();
+        for(String orderId : orderIds) {
+            responseList.add(getOrderDetails(orderId));
+        }
+        return new GetOrderHistoryResponse(Optional.of(responseList));
 
     }
 

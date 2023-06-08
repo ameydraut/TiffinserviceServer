@@ -14,7 +14,7 @@ import org.TastyTiffin.service.TastyTiffinService;
 import java.util.HashMap;
 import java.util.Map;
 
-public class GetOderDetails implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2HTTPResponse> {
+public class GetOrderDetails implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2HTTPResponse> {
 
     @Override
     public APIGatewayV2HTTPResponse handleRequest(APIGatewayV2HTTPEvent apiGatewayV2HTTPEvent, Context context) {
