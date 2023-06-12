@@ -1,7 +1,5 @@
 package org.TastyTiffin.model.request;
 
-import org.json.simple.ItemList;
-
 import java.util.List;
 import java.util.Optional;
 
@@ -11,15 +9,11 @@ public class PlaceOrderRequest {
     private Optional<List<String>> itemIds;
     private Optional<String> totalPrice;
 
-
-
-
     public PlaceOrderRequest() {
         userId=Optional.empty();
         providerId=Optional.empty();
         itemIds=Optional.empty();
         totalPrice=Optional.empty();
-
     }
 
     public PlaceOrderRequest(Optional<String> userId, Optional<String> providerId, Optional<List<String>> itemIds, Optional<String> totalPrice) {

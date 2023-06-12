@@ -8,6 +8,7 @@ import com.amazonaws.services.sns.AmazonSNS;
 import com.amazonaws.services.sns.AmazonSNSClientBuilder;
 import com.amazonaws.services.sns.model.CreatePlatformEndpointRequest;
 import com.amazonaws.services.sns.model.CreatePlatformEndpointResult;
+import com.amazonaws.services.sns.model.PublishRequest;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
@@ -150,8 +151,9 @@ public class TastyTiffinService {
                 getFoodItemResponse.setItemImageBucket(Optional.of(foodItem.getItemImageBucket()));
                 getFoodItemResponse.setItemImageKey(Optional.of(foodItem.getItemImageKey()));
                 getFoodItemResponse.setItemCurrency(Optional.of(foodItem.getItemCurrency()));
-                getFoodItemResponses.add(getFoodItemResponse);
                 getFoodItemResponse.setItemId(Optional.of(foodItem.getItemId()));
+                getFoodItemResponses.add(getFoodItemResponse);
+
             }
         }
 
@@ -247,18 +249,74 @@ public class TastyTiffinService {
         getOrderResponse.setTotalPrice(Optional.of(placeOrderTable1.getTotalPrice()));
         getOrderResponse.setUserId(Optional.of(placeOrderTable1.getUserId()));
         String eventBody = new ObjectMapper().registerModule(new Jdk8Module()).writeValueAsString(getOrderResponse);
-        amazonSNSClient.publish(providerToken,eventBody);
-        amazonSNSClient.publish(userToken,eventBody);
+        // Publish the message to the provider's device
+        publishToEndpoint(providerToken, eventBody);
+
+        // Publish the message to the user's device
+        publishToEndpoint(userToken, eventBody);
 
         return orderId.toString();
     }
 
-    public String orderStatus(OrderStatusRequest orderStatusRequest) {
+    private void publishToEndpoint(String endpointArn, String message) {
+        PublishRequest publishRequest = new PublishRequest()
+                .withTargetArn(endpointArn)
+                .withMessage(message);
+
+        try {
+            AmazonSNS snsClient = AmazonSNSClientBuilder.standard()
+                    .withRegion(Regions.AP_SOUTH_1)
+                    .build();
+            snsClient.publish(publishRequest);
+        } catch (Exception e) {
+            // Handle any exceptions that occur during publishing
+            e.printStackTrace();
+        }
+    }
+
+//    private void sendNotification(ProviderTable providerTable, UserTable userTable, String orderId) throws JsonProcessingException  {
+//        String providerToken = providerTable.getProviderToken();
+//        String userToken= userTable.getUserToken();
+//        PlaceOrderTable placeOrderTable1 = mapper.load(PlaceOrderTable.class, "ORDERS", orderId);
+//        GetOrderResponse getOrderResponse=new GetOrderResponse();
+//        getOrderResponse.setOrderId(Optional.of(placeOrderTable1.getOrderId()));
+//        getOrderResponse.setOrderStatus(Optional.of(placeOrderTable1.getOrderStatus()));
+//        getOrderResponse.setItemIds(Optional.of(placeOrderTable1.getItemIds()));
+//        getOrderResponse.setProviderId(Optional.of(placeOrderTable1.getProviderId()));
+//        getOrderResponse.setTotalPrice(Optional.of(placeOrderTable1.getTotalPrice()));
+//        getOrderResponse.setUserId(Optional.of(placeOrderTable1.getUserId()));
+//        String eventBody = new ObjectMapper().registerModule(new Jdk8Module()).writeValueAsString(getOrderResponse);
+//        amazonSNSClient.publish(providerToken,eventBody);
+//        amazonSNSClient.publish(userToken,eventBody);
+//    }
+
+    public String orderStatus(OrderStatusRequest orderStatusRequest) throws JsonProcessingException {
         String orderId = orderStatusRequest.getOrderId().get();
         String orderHashkey = orderStatusRequest.getPartitionKey().get();
         PlaceOrderTable placeOrderTable = mapper.load(PlaceOrderTable.class, orderHashkey, orderId);
         placeOrderTable.setOrderStatus(orderStatusRequest.getOrderStatus().get());
         mapper.save(placeOrderTable, DynamoDBMapperConfig.builder().withSaveBehavior(DynamoDBMapperConfig.SaveBehavior.UPDATE_SKIP_NULL_ATTRIBUTES).build());
+
+
+        String providerId = placeOrderTable.getProviderId();
+        ProviderTable providerTable = mapper.load(ProviderTable.class, "PROVIDER", providerId);
+        String userId = placeOrderTable.getUserId();
+        UserTable userTable = mapper.load(UserTable.class, "USER", userId);
+
+        String providerToken= providerTable.getProviderToken();
+        String userToken= userTable.getUserToken();
+
+        PlaceOrderTable placeOrderTable1 = mapper.load(PlaceOrderTable.class, "ORDERS", orderId.toString());
+        GetOrderResponse getOrderResponse=new GetOrderResponse();
+        getOrderResponse.setOrderId(Optional.of(placeOrderTable1.getOrderId()));
+        getOrderResponse.setOrderStatus(Optional.of(placeOrderTable1.getOrderStatus()));
+        getOrderResponse.setItemIds(Optional.of(placeOrderTable1.getItemIds()));
+        getOrderResponse.setProviderId(Optional.of(placeOrderTable1.getProviderId()));
+        getOrderResponse.setTotalPrice(Optional.of(placeOrderTable1.getTotalPrice()));
+        getOrderResponse.setUserId(Optional.of(placeOrderTable1.getUserId()));
+        String eventBody = new ObjectMapper().registerModule(new Jdk8Module()).writeValueAsString(getOrderResponse);
+        amazonSNSClient.publish(providerToken, eventBody);
+        amazonSNSClient.publish(userToken, eventBody);
         return orderId;
     }
 
@@ -297,7 +355,36 @@ public class TastyTiffinService {
         getOrderResponse.setTotalPrice(Optional.of(placeOrderTable.getTotalPrice()));
         getOrderResponse.setUserId(Optional.of(placeOrderTable.getUserId()));
 
+        ProviderTable providerTable = mapper.load(ProviderTable.class, "PROVIDER", placeOrderTable.getProviderId());
+        ProviderResponse providerResponse = new ProviderResponse();
+        providerResponse.setProviderName(Optional.of(providerTable.getProviderName()));
+        providerResponse.setImageProviderBucket(Optional.of(providerTable.getProviderImageBucket()));
+        providerResponse.setImageProviderKey(Optional.of(providerTable.getProviderImageKey()));
+        providerResponse.setProviderId(Optional.of(providerTable.getProvideId()));
+        getOrderResponse.setProvider(Optional.of(providerResponse));
+        List<String> itemsIds = placeOrderTable.getItemIds();
+        List<GetFoodItemResponse> getFoodItemResponses = new ArrayList<>();
+        if (providerTable.getItemList() != null) {
+            for (int i = 0; i < providerTable.getItemList().size(); i++) {
+                FoodItem foodItem = providerTable.getItemList().get(i);
+                if (!itemsIds.contains(foodItem.getItemId())) {
+                    continue;
+                }
+                GetFoodItemResponse getFoodItemResponse = new GetFoodItemResponse();
+                getFoodItemResponse.setItemName(Optional.of(foodItem.getItemName()));
+                getFoodItemResponse.setItemPrice(Optional.of(foodItem.getItemPrice()));
+                getFoodItemResponse.setItemRating(Optional.of(foodItem.getItemRating()));
+                getFoodItemResponse.setItemImageBucket(Optional.of(foodItem.getItemImageBucket()));
+                getFoodItemResponse.setItemImageKey(Optional.of(foodItem.getItemImageKey()));
+                getFoodItemResponse.setItemCurrency(Optional.of(foodItem.getItemCurrency()));
+                getFoodItemResponse.setItemId(Optional.of(foodItem.getItemId()));
+                getFoodItemResponses.add(getFoodItemResponse);
+
+            }
+        }
+        getOrderResponse.setItems(Optional.of(getFoodItemResponses));
         return getOrderResponse;
+
 
     }
     public String createEndpoint(String token){

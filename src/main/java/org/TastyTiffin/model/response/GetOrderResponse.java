@@ -6,7 +6,9 @@ import java.util.Optional;
 public class GetOrderResponse {
     private Optional<String> userId;
     private Optional<String> providerId;
+    private Optional<ProviderResponse> provider;
     private Optional<List<String>> itemIds;
+    private Optional<List<GetFoodItemResponse>> items;
     private Optional<String> orderId;
     private Optional<String> totalPrice;
     private Optional<String> orderStatus;
@@ -18,15 +20,25 @@ public class GetOrderResponse {
         orderId=Optional.empty();
         totalPrice=Optional.empty();
         orderStatus=Optional.empty();
+        provider = Optional.empty();
     }
 
-    public GetOrderResponse(Optional<String> userId, Optional<String> providerId, Optional<List<String>> itemIds, Optional<String> orderId, Optional<String> totalPrice, Optional<String> orderStatus) {
+    public GetOrderResponse(Optional<String> userId,
+                            Optional<String> providerId,
+                            Optional<List<String>> itemIds,
+                            Optional<List<GetFoodItemResponse>> items,
+                            Optional<String> orderId,
+                            Optional<String> totalPrice,
+                            Optional<String> orderStatus,
+                            Optional<ProviderResponse> provider) {
         this.userId = userId;
         this.providerId = providerId;
         this.itemIds = itemIds;
         this.orderId = orderId;
         this.totalPrice = totalPrice;
         this.orderStatus = orderStatus;
+        this.items = items;
+        this.provider = provider;
     }
 
     public Optional<String> getUserId() {
@@ -45,10 +57,16 @@ public class GetOrderResponse {
         this.providerId = providerId;
     }
 
+    public Optional<List<GetFoodItemResponse>> getItems() {
+        return items;
+    }
     public Optional<List<String>> getItemIds() {
         return itemIds;
     }
 
+    public void setItems(Optional<List<GetFoodItemResponse>> items) {
+        this.items = items;
+    }
     public void setItemIds(Optional<List<String>> itemIds) {
         this.itemIds = itemIds;
     }
@@ -75,5 +93,12 @@ public class GetOrderResponse {
 
     public void setOrderStatus(Optional<String> orderStatus) {
         this.orderStatus = orderStatus;
+    }
+    public Optional<ProviderResponse> getProvider() {
+        return provider;
+    }
+
+    public void setProvider(Optional<ProviderResponse> provider) {
+        this.provider = provider;
     }
 }
