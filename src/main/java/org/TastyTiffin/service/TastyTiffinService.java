@@ -162,7 +162,6 @@ public class TastyTiffinService {
         getProviderResponse.setProviderName(Optional.of(providerTable.getProviderName()));
         getProviderResponse.setProvideAddress(Optional.of(providerTable.getProvideAddress()));
         getProviderResponse.setKey(Optional.of(providerTable.getKey()));
-        getProviderResponse.setGeoCoordinates(Optional.of(providerTable.getGeoCoordinates()));
         getProviderResponse.setImageUrl(Optional.of(providerTable.getProviderImageBucket()));
         getProviderResponse.setIsFavorite(Optional.of(providerTable.getFavorite()));
         getProviderResponse.setItemList(Optional.of(getFoodItemResponses));
@@ -274,21 +273,6 @@ public class TastyTiffinService {
         }
     }
 
-//    private void sendNotification(ProviderTable providerTable, UserTable userTable, String orderId) throws JsonProcessingException  {
-//        String providerToken = providerTable.getProviderToken();
-//        String userToken= userTable.getUserToken();
-//        PlaceOrderTable placeOrderTable1 = mapper.load(PlaceOrderTable.class, "ORDERS", orderId);
-//        GetOrderResponse getOrderResponse=new GetOrderResponse();
-//        getOrderResponse.setOrderId(Optional.of(placeOrderTable1.getOrderId()));
-//        getOrderResponse.setOrderStatus(Optional.of(placeOrderTable1.getOrderStatus()));
-//        getOrderResponse.setItemIds(Optional.of(placeOrderTable1.getItemIds()));
-//        getOrderResponse.setProviderId(Optional.of(placeOrderTable1.getProviderId()));
-//        getOrderResponse.setTotalPrice(Optional.of(placeOrderTable1.getTotalPrice()));
-//        getOrderResponse.setUserId(Optional.of(placeOrderTable1.getUserId()));
-//        String eventBody = new ObjectMapper().registerModule(new Jdk8Module()).writeValueAsString(getOrderResponse);
-//        amazonSNSClient.publish(providerToken,eventBody);
-//        amazonSNSClient.publish(userToken,eventBody);
-//    }
 
     public String orderStatus(OrderStatusRequest orderStatusRequest) throws JsonProcessingException {
         String orderId = orderStatusRequest.getOrderId().get();
@@ -315,8 +299,12 @@ public class TastyTiffinService {
         getOrderResponse.setTotalPrice(Optional.of(placeOrderTable1.getTotalPrice()));
         getOrderResponse.setUserId(Optional.of(placeOrderTable1.getUserId()));
         String eventBody = new ObjectMapper().registerModule(new Jdk8Module()).writeValueAsString(getOrderResponse);
-        amazonSNSClient.publish(providerToken, eventBody);
-        amazonSNSClient.publish(userToken, eventBody);
+        // Publish the message to the provider's device
+        publishToEndpoint(providerToken, eventBody);
+
+        // Publish the message to the user's device
+        publishToEndpoint(userToken, eventBody);
+
         return orderId;
     }
 
